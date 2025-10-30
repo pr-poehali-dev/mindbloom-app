@@ -117,6 +117,15 @@ export default function Index() {
             </h1>
           </div>
           <p className="text-muted-foreground text-lg">Ваш умный дневник настроения</p>
+          <Button
+            onClick={() => navigate('/subscription')}
+            variant="outline"
+            size="sm"
+            className="mt-4"
+          >
+            <Icon name="Crown" size={16} className="mr-2" />
+            Подписка
+          </Button>
         </header>
 
         {!showForm ? (

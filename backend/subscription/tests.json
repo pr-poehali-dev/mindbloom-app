@@ -1,0 +1,32 @@
+{
+  "tests": [
+    {
+      "name": "Get subscription status",
+      "method": "GET",
+      "path": "/?user_id=default_user",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "user_id": "string",
+        "plan": "string",
+        "status": "string",
+        "has_access": "boolean"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Activate subscription",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "user_id": "default_user",
+        "action": "activate"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": "boolean",
+        "message": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

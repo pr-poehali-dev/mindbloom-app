@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,16 +34,31 @@ interface Stats {
 }
 
 export default function Analytics() {
+  const navigate = useNavigate();
   const [insights, setInsights] = useState<Insight[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [entries, setEntries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState(30);
+  const [subscription, setSubscription] = useState<any>(null);
 
   useEffect(() => {
     loadData();
+    loadSubscription();
   }, [period]);
+
+  const loadSubscription = async () => {
+    try {
+      const res = await fetch(
+        'https://functions.poehali.dev/d15da108-b3f4-4dd4-8469-329cb7dd16b7?user_id=default_user'
+      );
+      const data = await res.json();
+      setSubscription(data);
+    } catch (error) {
+      console.error('Failed to load subscription:', error);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -102,6 +118,27 @@ export default function Analytics() {
           </div>
           <p className="text-muted-foreground text-lg">Ваши закономерности и персональные рекомендации</p>
         </header>
+
+        {subscription && !subscription.has_access && (
+          <Card className="p-6 mb-8 bg-gradient-to-r from-primary/10 to-accent/10 border-2 border-primary animate-scale-in">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Icon name="Lock" size={32} className="text-primary" />
+                <div>
+                  <h3 className="text-lg font-semibold">Пробный период закончился</h3>
+                  <p className="text-sm text-muted-foreground">Оформите подписку, чтобы продолжить пользоваться аналитикой</p>
+                </div>
+              </div>
+              <Button
+                onClick={() => navigate('/subscription')}
+                className="bg-gradient-to-r from-primary to-accent"
+              >
+                <Icon name="Crown" size={20} className="mr-2" />
+                Оформить подписку
+              </Button>
+            </div>
+          </Card>
+        )}
 
         <div className="flex justify-center gap-2 mb-8">
           {[7, 14, 30, 90].map((days) => (
