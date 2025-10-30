@@ -1,0 +1,16 @@
+{
+  "tests": [
+    {
+      "name": "Get AI insights",
+      "method": "GET",
+      "path": "/?user_id=default_user&days=30",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "insights": "array",
+        "recommendations": "array",
+        "stats": "object"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

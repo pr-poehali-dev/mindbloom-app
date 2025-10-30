@@ -1,0 +1,32 @@
+{
+  "tests": [
+    {
+      "name": "Get mood entries",
+      "method": "GET",
+      "path": "/?user_id=default_user&days=7",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "entries": "array"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create mood entry",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "user_id": "default_user",
+        "mood": 8,
+        "sleep_hours": 7.5,
+        "stress_level": 4,
+        "activities": ["walk", "yoga"],
+        "notes": "Test entry"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "entry": "object"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

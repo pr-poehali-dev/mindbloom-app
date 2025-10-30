@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import Icon from '@/components/ui/icon';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { useToast } from '@/hooks/use-toast';
 
 const moodEmojis = ['😢', '😟', '😕', '😐', '🙂', '😊', '😄', '😁', '🤩', '🥳'];
 
@@ -20,23 +22,39 @@ const activities = [
   { id: 'none', label: 'Не было', icon: 'X' },
 ];
 
-const mockData = [
-  { date: '24 окт', mood: 7, sleep: 7.5, stress: 4 },
-  { date: '25 окт', mood: 6, sleep: 6, stress: 6 },
-  { date: '26 окт', mood: 8, sleep: 8, stress: 3 },
-  { date: '27 окт', mood: 7, sleep: 7, stress: 4 },
-  { date: '28 окт', mood: 9, sleep: 8.5, stress: 2 },
-  { date: '29 окт', mood: 8, sleep: 8, stress: 3 },
-  { date: '30 окт', mood: 7, sleep: 7, stress: 5 },
-];
-
 export default function Index() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [mood, setMood] = useState(7);
   const [sleep, setSleep] = useState(7);
   const [stress, setStress] = useState(5);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [entries, setEntries] = useState<any[]>([]);
+  const [latestEntry, setLatestEntry] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadEntries();
+  }, []);
+
+  const loadEntries = async () => {
+    try {
+      const res = await fetch(
+        'https://functions.poehali.dev/767af020-3777-411a-8d74-fe45aeaedd10?user_id=default_user&days=7'
+      );
+      const data = await res.json();
+      setEntries(data.entries || []);
+      if (data.entries && data.entries.length > 0) {
+        setLatestEntry(data.entries[0]);
+      }
+    } catch (error) {
+      console.error('Failed to load entries:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleActivity = (activityId: string) => {
     setSelectedActivities(prev =>
@@ -46,10 +64,45 @@ export default function Index() {
     );
   };
 
-  const handleSubmit = () => {
-    console.log({ mood, sleep, stress, selectedActivities, notes });
-    setShowForm(false);
+  const handleSubmit = async () => {
+    try {
+      const res = await fetch('https://functions.poehali.dev/767af020-3777-411a-8d74-fe45aeaedd10', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: 'default_user',
+          mood,
+          sleep_hours: sleep,
+          stress_level: stress,
+          activities: selectedActivities,
+          notes,
+        }),
+      });
+      const data = await res.json();
+      toast({
+        title: 'Запись сохранена!',
+        description: 'Ваши данные успешно добавлены в дневник',
+      });
+      setShowForm(false);
+      loadEntries();
+    } catch (error) {
+      toast({
+        title: 'Ошибка',
+        description: 'Не удалось сохранить запись',
+        variant: 'destructive',
+      });
+    }
   };
+
+  const chartData = entries
+    .slice(0, 7)
+    .reverse()
+    .map((entry) => ({
+      date: new Date(entry.entry_date).toLocaleDateString('ru', { day: 'numeric', month: 'short' }),
+      mood: entry.mood,
+      sleep: entry.sleep_hours,
+      stress: entry.stress_level,
+    }));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">
@@ -70,10 +123,19 @@ export default function Index() {
           <div className="space-y-8 animate-slide-in-up">
             <Card className="p-8 bg-white/80 backdrop-blur-sm border-2 border-primary/20 shadow-xl hover:shadow-2xl transition-all duration-300">
               <div className="flex items-center justify-between mb-6">
-                <div>
+                <div className="flex-1">
                   <h2 className="text-2xl font-semibold mb-2">Как вы себя чувствуете сегодня?</h2>
                   <p className="text-muted-foreground">Отследите своё настроение и найдите закономерности</p>
                 </div>
+                <Button
+                  onClick={() => navigate('/analytics')}
+                  variant="outline"
+                  size="lg"
+                  className="mr-2"
+                >
+                  <Icon name="TrendingUp" size={20} className="mr-2" />
+                  Аналитика
+                </Button>
                 <Button
                   onClick={() => setShowForm(true)}
                   size="lg"
@@ -90,8 +152,8 @@ export default function Index() {
                     <Icon name="Heart" size={24} className="text-primary" />
                     <span className="font-semibold text-lg">Настроение</span>
                   </div>
-                  <div className="text-3xl font-bold text-primary">7/10</div>
-                  <div className="text-2xl mt-2">😊</div>
+                  <div className="text-3xl font-bold text-primary">{latestEntry?.mood || 7}/10</div>
+                  <div className="text-2xl mt-2">{moodEmojis[(latestEntry?.mood || 7) - 1]}</div>
                 </div>
 
                 <div className="p-6 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 border border-blue-200">
@@ -99,8 +161,8 @@ export default function Index() {
                     <Icon name="Moon" size={24} className="text-blue-600" />
                     <span className="font-semibold text-lg">Сон</span>
                   </div>
-                  <div className="text-3xl font-bold text-blue-600">7 ч</div>
-                  <div className="text-sm text-muted-foreground mt-2">Хорошо</div>
+                  <div className="text-3xl font-bold text-blue-600">{latestEntry?.sleep_hours || 7} ч</div>
+                  <div className="text-sm text-muted-foreground mt-2">{(latestEntry?.sleep_hours || 7) >= 7 ? 'Хорошо' : 'Можно лучше'}</div>
                 </div>
 
                 <div className="p-6 rounded-2xl bg-gradient-to-br from-pink-100 to-pink-50 border border-pink-200">
@@ -108,8 +170,8 @@ export default function Index() {
                     <Icon name="Zap" size={24} className="text-pink-600" />
                     <span className="font-semibold text-lg">Стресс</span>
                   </div>
-                  <div className="text-3xl font-bold text-pink-600">5/10</div>
-                  <div className="text-sm text-muted-foreground mt-2">Умеренный</div>
+                  <div className="text-3xl font-bold text-pink-600">{latestEntry?.stress_level || 5}/10</div>
+                  <div className="text-sm text-muted-foreground mt-2">{(latestEntry?.stress_level || 5) <= 4 ? 'Низкий' : 'Умеренный'}</div>
                 </div>
               </div>
             </Card>
@@ -122,7 +184,7 @@ export default function Index() {
               
               <div className="h-80 mt-6">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={mockData}>
+                  <AreaChart data={chartData}>
                     <defs>
                       <linearGradient id="colorMood" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#9b87f5" stopOpacity={0.3}/>
